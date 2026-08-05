@@ -1,0 +1,8 @@
+POST http://localhost:8080/auth/register-specialist
+Content-Type:application/json
+{
+  "name": "samira",
+  "lastName": "majidi",
+  "email": "samirafghgdi@gmail.com",
+  "password": "211067Ha78"
+}

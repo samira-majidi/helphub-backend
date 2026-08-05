@@ -1,0 +1,8 @@
+POST http://localhost:8080/auth/register
+Content-Type:application/json
+{
+  "name": "Systems",
+  "lastName": "Administrator",
+  "email": "system@hSFGSJookinss.com",
+  "password": "SystemUser!Secure2026"
+}

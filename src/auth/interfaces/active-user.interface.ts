@@ -1,0 +1,6 @@
+export interface ActiveUserData {
+  sub: number;
+  email: string;
+  role: string;
+  name?: string;
+}

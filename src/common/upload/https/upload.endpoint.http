@@ -1,0 +1,10 @@
+POST http://localhost:8080/uploads/file
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEwNiwiZW1haWwiOiJzYW1pcmFmZ2hnZGlAZ21haWwuY29tIiwicm9sZSI6Imhvc3QiLCJpYXQiOjE3ODM1Mjc4ODYsImV4cCI6MTc4MzYxNDI4NiwiYXVkIjoibG9jYWxob3N0OjUwMDAiLCJpc3MiOiJsb2NhbGhvc3Q6NTAwMCJ9.JOARk1swPbjNRv9otLVZ0yEmkL4Kt7_TQKuOtcT-988
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="tabriz.png"
+Content-Type: image/jpeg
+
+< C:\Users\ADMIN\hotel-booking\backend\hotel-booking-intro\src\common\upload\https\ad86bb01-27f9-467e-a85d-d62528aa6a12.png
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
