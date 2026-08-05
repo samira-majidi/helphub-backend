@@ -23,7 +23,8 @@ import redisConfig from './config/redis.config';
 import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UploadModule } from './common/upload/upload.module';
-//import { ChatModule } from './chat/chat.module';
+
+import { ChatModule } from './chat/chat.module';
 const ENV = process.env.NODE_ENV;
 @Module({
   imports: [
@@ -64,6 +65,7 @@ const ENV = process.env.NODE_ENV;
 
     RedisModule,
     UploadModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
