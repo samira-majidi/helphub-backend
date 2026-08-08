@@ -20,7 +20,11 @@ export class UploadService {
     private readonly configService: ConfigService,
   ) {}
 
-  public async uploadFile(file: Express.Multer.File, userId: number) {
+  public async uploadFile(
+    file: Express.Multer.File,
+    userId: number,
+    isPrivate: boolean = false,
+  ) {
     try {
       // ✅ اول چک کن که file وجود داره
       if (!file) {
@@ -48,7 +52,10 @@ export class UploadService {
       }
 
       // آپلود به Arvan Cloud
-      const uploadResult = await this.uploadToAwsProvider.fileUpload(file);
+      const uploadResult = await this.uploadToAwsProvider.fileUpload(
+        file,
+        isPrivate,
+      );
 
       // ساخت object نهایی
       const uploadFile: UploadFile = {
@@ -58,9 +65,11 @@ export class UploadService {
         mime: file.mimetype,
         size: file.size,
         uploadedById: userId,
+        isPrivate,
       };
 
       const upload = this.uploadRepository.create(uploadFile);
+
       return await this.uploadRepository.save(upload);
     } catch (error) {
       if (error instanceof BadRequestException) {

@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
 export class UploadToAwsProvider {
@@ -46,7 +51,10 @@ export class UploadToAwsProvider {
     return `${name}-${Date.now()}-${randomUUID()}${extension}`;
   }
 
-  public async fileUpload(file: Express.Multer.File) {
+  public async fileUpload(
+    file: Express.Multer.File,
+    isPrivate: boolean = false,
+  ) {
     this.logger.log('Starting file upload');
 
     const fileName = this.generateFileName(file.originalname);
@@ -54,13 +62,13 @@ export class UploadToAwsProvider {
     const bucket = this.configService.getOrThrow<string>(
       'appConfig.arvanBucketName',
     );
-
+    const aclType = isPrivate ? 'private' : 'public-read';
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: fileName,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: 'public-read',
+      ACL: aclType,
     });
 
     try {
@@ -83,6 +91,29 @@ export class UploadToAwsProvider {
       this.logger.error(`Error: ${error}`);
 
       throw new Error(`Failed to upload file: ${error || 'Unknown error'}`);
+    }
+  }
+  public async getPresignedUrl(fileKey: string): Promise<string> {
+    try {
+      const bucket = this.configService.getOrThrow<string>(
+        'appConfig.arvanBucketName',
+      );
+      const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: fileKey,
+      });
+
+      // تولید لینک با اعتبار ۱ ساعت (۳۶۰۰ ثانیه)
+      const signedUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn: 3600,
+      });
+      return signedUrl;
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate presigned URL for key: ${fileKey}`,
+        error,
+      );
+      throw new Error('Could not generate secure url for file');
     }
   }
 }

@@ -52,6 +52,9 @@ export class Upload {
   @Column()
   uploadedById: number;
 
+  @Column({ default: false })
+  isPrivate: boolean;
+
   @CreateDateColumn()
   createDate: Date;
   @UpdateDateColumn()

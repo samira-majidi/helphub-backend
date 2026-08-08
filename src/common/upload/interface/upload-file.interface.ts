@@ -7,4 +7,5 @@ export interface UploadFile {
   mime: string;
   size: number;
   uploadedById: number;
+  isPrivate;
 }

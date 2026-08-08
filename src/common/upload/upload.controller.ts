@@ -25,8 +25,9 @@ export class UploadController {
   @Post('file')
   public uploadFile(
     @UploadedFile() file: Express.Multer.File,
+    @Body('isPrivate') isPrivate: string,
     @ActiveUser('sub') userId: number,
   ) {
-    return this.uploadService.uploadFile(file, userId);
+    return this.uploadService.uploadFile(file, userId, isPrivate === 'true');
   }
 }
