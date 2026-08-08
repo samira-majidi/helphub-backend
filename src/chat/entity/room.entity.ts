@@ -7,7 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { RoomMember } from './room-member.entity';
-import { Message } from './message.enity';
+import { Message } from './message.entity';
 
 export enum RoomType {
   DIRECT = 'DIRECT',

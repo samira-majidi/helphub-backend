@@ -7,15 +7,18 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+import { CustomIoAdapter } from './common/websocket/custom-io.adaptor';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // 🚀 فعال‌سازی CORS برای ارتباط بدون مشکل با Next.js
   app.enableCors({
-    origin: 'http://localhost:3000', // آدرس پیش‌فرض فرانت‌اند (اگه پورت Next.js رو عوض کردی، اینجا هم تغییرش بده)
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // این گزینه برای ارسال کوکی‌ها و توکن‌های احراز هویت به شدت واجبه!
+    credentials: true,
   });
+
+  app.useWebSocketAdapter(new CustomIoAdapter(app));
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -29,8 +32,8 @@ async function bootstrap() {
   // swagger configuration
   //*
   const config = new DocumentBuilder()
-    .setDescription('Welcome this is my first API documentation') // یه کوچولو املای API رو درست کردم 😉
-    .setTitle('Nest.JS /blog API')
+    .setDescription('Welcome this is my first API documentation')
+    .setTitle('HelpHub API')
     .setVersion('1.0')
     .setTermsOfService('terms of service')
     //.setLicense('MIT')

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Room } from './room.entity';
 import { User } from '#src/users/user.entity';
+import { Upload } from '#src/common/upload/entity/upload.entity';
 
 @Entity('messages')
 @Index('IDX_ROOM_ID_CREATED_AT', ['room_id', 'created_at'])
@@ -39,4 +40,13 @@ export class Message {
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'sender_id' })
   sender: User;
+  @Column({ type: 'enum', enum: ['TEXT', 'IMAGE'], default: 'TEXT' })
+  type: 'TEXT' | 'IMAGE';
+
+  @ManyToOne(() => Upload, { eager: true, nullable: true })
+  @JoinColumn({ name: 'image_id' })
+  image: Upload;
+
+  @Column({ nullable: true })
+  image_id: number;
 }
