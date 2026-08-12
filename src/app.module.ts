@@ -25,6 +25,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { UploadModule } from './common/upload/upload.module';
 
 import { ChatModule } from './chat/chat.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { NotificationModule } from './notification/notification.module';
 const ENV = process.env.NODE_ENV;
 @Module({
   imports: [
@@ -58,6 +60,9 @@ const ENV = process.env.NODE_ENV;
         port: 6379,
       },
     }),
+    EventEmitterModule.forRoot({
+      global: true, // ← این مهمه!
+    }),
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync(jwtConfig.asProvider()),
     RbacModule,
@@ -66,6 +71,7 @@ const ENV = process.env.NODE_ENV;
     RedisModule,
     UploadModule,
     ChatModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

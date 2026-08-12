@@ -36,14 +36,21 @@ export class UploadService {
         throw new BadRequestException('File mimetype is missing');
       }
 
-      // ✅ حالا چک کن که MIME type معتبره
-      const allowedMimeTypes = [
+      const imageMimeTypes = [
         'image/gif',
         'image/jpeg',
         'image/jpg',
         'image/png',
         'image/webp',
       ];
+      const audioMimeTypes = [
+        'audio/webm',
+        'audio/ogg',
+        'audio/mpeg',
+        'audio/mp4',
+        'audio/wav',
+      ]; // 👈 فرمت‌های ویس
+      const allowedMimeTypes = [...imageMimeTypes, ...audioMimeTypes];
 
       if (!allowedMimeTypes.includes(file.mimetype)) {
         throw new BadRequestException(
@@ -56,12 +63,14 @@ export class UploadService {
         file,
         isPrivate,
       );
-
+      const currentFileType = file.mimetype.startsWith('audio/')
+        ? fileType.AUDIO
+        : fileType.IMAGE;
       // ساخت object نهایی
       const uploadFile: UploadFile = {
         name: uploadResult.key,
         path: uploadResult.url,
-        type: fileType.IMAGE,
+        type: currentFileType,
         mime: file.mimetype,
         size: file.size,
         uploadedById: userId,

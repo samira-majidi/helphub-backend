@@ -19,7 +19,6 @@ export abstract class BaseGateway
 
   protected abstract logger: Logger;
 
-  // 👈 سرویس ردیس (یا سرویس کاربر) به کلاس پایه اضافه شد
   constructor(
     protected readonly jwtService: JwtService,
     protected readonly redisService: RedisService,

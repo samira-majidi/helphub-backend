@@ -3,7 +3,9 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
-  WsException, // اضافه شد
+  WsException,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Logger, UseFilters } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -19,7 +21,10 @@ import { RedisService } from '#src/redis/providers/redis.service';
 
 @WebSocketGateway({ namespace: '/chat' })
 @UseFilters(new WsCatchAllFilter())
-export class ChatGateway extends BaseGateway {
+export class ChatGateway
+  extends BaseGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   protected readonly logger = new Logger(ChatGateway.name);
 
   constructor(
@@ -29,7 +34,46 @@ export class ChatGateway extends BaseGateway {
   ) {
     super(jwtService, redisService);
   }
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  async handleConnection(client: AuthenticatedSocket) {
+    // ۱. متد کلاس پدر رو مستقیماً صدا می‌زنیم (بدون if)
+    super.handleConnection(client);
 
+    // ۲. چک کردن آیدی هم از data و هم از خود کلاینت تا خیالمون راحت باشه
+    const userId = client.user?.sub || client.data?.user?.sub;
+
+    // لاگ برای دیباگ که مطمئن بشیم آیدی رو داریم
+    if (!userId) {
+      this.logger.warn(
+        `Client ${client.id} connected but client.user is missing!`,
+      );
+      return;
+    }
+
+    await this.redisService.set(`user:${userId}:status`, 'online', 0);
+    this.server.emit('userStatusChanged', { userId, status: 'online' });
+    this.logger.log(`🟢 User ${userId} is Online`);
+  }
+
+  async handleDisconnect(client: AuthenticatedSocket) {
+    // صدا زدن متد کلاس پدر با await (بدون if)
+    await super.handleDisconnect(client);
+
+    const userId = client.user?.sub || client.data?.user?.sub;
+    if (!userId) return;
+
+    // بقیه کدهای دیس‌کانکت...
+    await this.redisService.del(`user:${userId}:status`);
+    await this.chatService.updateUserLastSeen(userId);
+
+    const lastSeen = Date.now();
+    this.server.emit('userStatusChanged', {
+      userId,
+      status: 'offline',
+      lastSeen,
+    });
+    this.logger.log(`🔴 User ${userId} is Offline`);
+  }
   @SubscribeMessage('joinDirectRoom')
   async handleJoinDirectRoom(
     @MessageBody() data: JoinDirectRoomDto,
@@ -49,7 +93,13 @@ export class ChatGateway extends BaseGateway {
     );
 
     const targetUserLastSeen = lastSeenStr ? Number(lastSeenStr) : null;
-
+    const targetStatus = await this.redisService.get(
+      `user:${data.targetUserId}:status`,
+    );
+    const isTargetOnline = targetStatus === 'online';
+    this.logger.log(
+      `User ${currentUserId} joined direct room: ${roomName} with User ${data.targetUserId} status: ${targetStatus}`,
+    );
     this.logger.log(
       `User ${currentUserId} joined direct room: ${roomName} with User ${data.targetUserId}`,
     );
@@ -60,6 +110,7 @@ export class ChatGateway extends BaseGateway {
         roomId: room.id,
         roomName,
         targetUserLastSeen,
+        isTargetOnline,
         message: 'Joined successfully',
       },
     };
@@ -82,6 +133,7 @@ export class ChatGateway extends BaseGateway {
         payload.content,
         payload.type, // پاس دادن type
         payload.imageId,
+        payload.audioId,
       );
 
       // ۲. برودکست کردن پیامِ ذخیره شده به همه اعضای اتاق
@@ -96,5 +148,14 @@ export class ChatGateway extends BaseGateway {
       this.logger.error(`Error saving direct message in`, error);
       throw new WsException('Failed to save and send message');
     }
+  }
+  @SubscribeMessage('typing')
+  handleTyping(
+    @MessageBody() payload: { roomId: string; isTyping: boolean },
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    const roomName = `room_${payload.roomId}`;
+    // ارسال وضعیت تایپ به همه اعضای اتاق به جز کسی که داره تایپ می‌کنه
+    client.to(roomName).emit('userTyping', { isTyping: payload.isTyping });
   }
 }

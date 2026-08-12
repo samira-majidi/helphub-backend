@@ -40,8 +40,9 @@ export class Message {
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'sender_id' })
   sender: User;
-  @Column({ type: 'enum', enum: ['TEXT', 'IMAGE'], default: 'TEXT' })
-  type: 'TEXT' | 'IMAGE';
+
+  @Column({ type: 'enum', enum: ['TEXT', 'IMAGE', 'AUDIO'], default: 'TEXT' })
+  type: 'TEXT' | 'IMAGE' | 'AUDIO';
 
   @ManyToOne(() => Upload, { eager: true, nullable: true })
   @JoinColumn({ name: 'image_id' })
@@ -49,4 +50,11 @@ export class Message {
 
   @Column({ nullable: true })
   image_id: number;
+
+  @ManyToOne(() => Upload, { eager: true, nullable: true })
+  @JoinColumn({ name: 'audio_id' })
+  audio: Upload;
+
+  @Column({ nullable: true })
+  audio_id: number;
 }

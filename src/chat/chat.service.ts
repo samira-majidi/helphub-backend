@@ -12,6 +12,7 @@ import { Message } from './entity/message.entity';
 import { GetMessagesQueryDto } from './dto/getMessagequery.dto';
 import { RedisService } from '#src/redis/providers/redis.service';
 import { UploadToAwsProvider } from '#src/common/upload/providers/upload-to-aws.provider';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ChatService {
@@ -26,7 +27,8 @@ export class ChatService {
     private readonly roomMemberRepository: Repository<RoomMember>,
     private readonly dataSource: DataSource,
     private readonly redisService: RedisService,
-    private readonly uploadToAwsProvider: UploadToAwsProvider, // 👈 اینجا اضافه شد
+    private readonly uploadToAwsProvider: UploadToAwsProvider,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findOrCreateDirectRoom(
@@ -116,23 +118,89 @@ export class ChatService {
       await queryRunner.release();
     }
   }
-
   async saveDirectMessage(
     roomId: string,
     senderId: number,
     content: string,
-    type: 'TEXT' | 'IMAGE' = 'TEXT',
+    type?: 'TEXT' | 'IMAGE' | 'AUDIO',
     imageId?: number,
+    audioId?: number,
   ): Promise<Message> {
+    // ۱. ساخت و ذخیره اولیه پیام در دیتابیس
     const newMessage = this.messageRepository.create({
       room_id: roomId,
       sender_id: senderId,
       content: content || '',
       type: type,
       image_id: imageId,
+      audio_id: audioId,
     });
 
-    return await this.messageRepository.save(newMessage);
+    const savedMessage = await this.messageRepository.save(newMessage);
+
+    // ۲. فراخوانی مجدد پیام همراه با روابط عکس و صدا
+    const messageWithRelations = await this.messageRepository.findOne({
+      where: { id: savedMessage.id },
+      relations: ['image', 'audio'],
+    });
+
+    if (!messageWithRelations) {
+      return savedMessage;
+    }
+
+    // ۳. تولید Presigned URL (همون کدهای خودت)
+    if (messageWithRelations.type === 'IMAGE' && messageWithRelations.image) {
+      messageWithRelations.image.path =
+        await this.uploadToAwsProvider.getPresignedUrl(
+          messageWithRelations.image.name,
+        );
+    } else if (
+      messageWithRelations.type === 'AUDIO' &&
+      messageWithRelations.audio
+    ) {
+      messageWithRelations.audio.path =
+        await this.uploadToAwsProvider.getPresignedUrl(
+          messageWithRelations.audio.name,
+        );
+    }
+
+    // 🌟 ۴. پیدا کردن گیرنده پیام برای ارسال نوتیفیکیشن
+    try {
+      const receiver = await this.roomMemberRepository
+        .createQueryBuilder('roomMember')
+        .where('roomMember.room_id = :roomId', { roomId })
+        .andWhere('roomMember.user_id != :senderId', { senderId })
+        .getOne();
+
+      if (receiver) {
+        // 🌟 ۵. شلیک رویداد نوتیفیکیشن
+        this.eventEmitter.emit('notification.create', {
+          userId: String(receiver.user_id), // اینجا اگر آیدی عدده به استرینگ تبدیل کردیم تا گیر نده
+          type: 'NEW_MESSAGE', // مقدار تایپت رو از Enum خودت بذار (مثلا NotificationType.NEW_MESSAGE)
+          title: 'new message',
+          message: content
+            ? content.substring(0, 50)
+            : 'شما یک پیام جدید دارید', // پیش‌نمایش پیام
+          metadata: {
+            roomId: roomId,
+            messageId: savedMessage.id,
+            senderId: senderId,
+          },
+        });
+        this.logger.log(
+          `Notification event emitted for user ${receiver.user_id}`,
+        );
+      }
+    } catch (error) {
+      // خطا در ارسال نوتیفیکیشن نباید کل پروسه چت رو متوقف کنه
+      this.logger.error(
+        `Failed to emit notification for room ${roomId}`,
+        error,
+      );
+    }
+
+    // ۶. برگرداندن پیام کامل برای ارسال به سوکت چت
+    return messageWithRelations;
   }
 
   async getRoomMessages(
@@ -145,12 +213,28 @@ export class ChatService {
     const queryBuilder = this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.image', 'image')
+      .leftJoinAndSelect('message.audio', 'audio')
       .where('message.room_id = :roomId', { roomId })
       .orderBy('message.created_at', 'DESC')
+      .addOrderBy('message.id', 'DESC')
       .take(limit + 1);
-
     if (cursor) {
-      queryBuilder.andWhere('message.id < :cursor', { cursor });
+      const cursorMessage = await this.messageRepository.findOne({
+        where: { id: cursor },
+        select: ['id', 'created_at'],
+      });
+
+      if (cursorMessage) {
+        queryBuilder.andWhere(
+          '(message.created_at < :cursorDate OR (message.created_at = :cursorDate AND message.id < :cursorId))',
+          {
+            cursorDate: cursorMessage.created_at,
+            cursorId: cursorMessage.id,
+          },
+        );
+      } else {
+        queryBuilder.andWhere('message.id < :cursor', { cursor });
+      }
     }
 
     const messages = await queryBuilder.getMany();
@@ -165,20 +249,28 @@ export class ChatService {
 
     const mappedMessages = await Promise.all(
       reversedMessages.map(async (msg) => {
+        let updatedImage = msg.image;
+        let updatedAudio = msg.audio;
         if (msg.image && msg.image.isPrivate) {
           const presignedUrl = await this.uploadToAwsProvider.getPresignedUrl(
             msg.image.name,
           );
-
-          return {
-            ...msg,
-            image: {
-              ...msg.image,
-              path: presignedUrl,
-            },
-          };
+          updatedImage = { ...msg.image, path: presignedUrl };
         }
-        return msg;
+
+        // 👈 ۲. هندل کردن لینک ویس‌ها (جدید)
+        if (msg.audio && msg.audio.isPrivate) {
+          const presignedUrl = await this.uploadToAwsProvider.getPresignedUrl(
+            msg.audio.name,
+          );
+          updatedAudio = { ...msg.audio, path: presignedUrl };
+        }
+
+        return {
+          ...msg,
+          image: updatedImage,
+          audio: updatedAudio,
+        };
       }),
     );
 

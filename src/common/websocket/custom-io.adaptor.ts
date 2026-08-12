@@ -3,7 +3,6 @@ import { ServerOptions } from 'socket.io';
 
 export class CustomIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: ServerOptions): any {
-    // تایپ صریح رو از اینجا حذف کردیم
     const globalOptions = {
       ...options,
       cors: {

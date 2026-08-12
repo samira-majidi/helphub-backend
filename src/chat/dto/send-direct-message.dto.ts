@@ -14,11 +14,16 @@ export class SendDirectMessageDto {
   @IsString({ message: 'محتوای پیام باید متن باشد.' })
   @IsNotEmpty({ message: 'پیام نمی‌تواند خالی باشد.' })
   content: string;
+
   @IsOptional()
-  @IsEnum(['TEXT', 'IMAGE'], { message: 'نوع پیام نامعتبر است.' })
-  type?: 'TEXT' | 'IMAGE';
+  @IsEnum(['TEXT', 'IMAGE', 'AUDIO'], { message: 'نوع پیام نامعتبر است.' })
+  type?: 'TEXT' | 'IMAGE' | 'AUDIO';
 
   @IsOptional()
   @IsNumber({}, { message: 'شناسه تصویر باید عدد باشد.' })
   imageId?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'شناسه صوت باید عدد باشد.' })
+  audioId?: number;
 }
