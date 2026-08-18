@@ -30,6 +30,7 @@ export class NotificationService {
       const notification = this.notificationRepo.create(payload);
 
       // ۲. به صورت دستی و صریح، رابطه کاربر را ست می‌کنیم
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       notification.user = { id: payload.userId } as any;
 
       // ۳. ذخیره در دیتابیس

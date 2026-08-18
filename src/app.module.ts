@@ -27,11 +27,12 @@ import { UploadModule } from './common/upload/upload.module';
 import { ChatModule } from './chat/chat.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { NotificationModule } from './notification/notification.module';
+import { ExpertsModule } from './experts/experts.module';
 const ENV = process.env.NODE_ENV;
 @Module({
   imports: [
     UsersModule,
-
+    ExpertsModule,
     AuthModule,
     ConfigModule.forRoot({
       isGlobal: true,

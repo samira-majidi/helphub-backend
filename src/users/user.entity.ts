@@ -1,7 +1,8 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { UserRole } from '../common/enum/user-role.enum';
 
 import { Exclude } from 'class-transformer';
+import { Expert } from '#src/experts/entity/experts.entity';
 
 @Entity()
 export class User {
@@ -43,4 +44,7 @@ export class User {
     default: UserRole.USER,
   })
   role: UserRole;
+
+  @OneToOne(() => Expert, (expert) => expert.user)
+  expert: Expert;
 }
