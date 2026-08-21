@@ -7,31 +7,49 @@ import {
   Delete,
   Patch,
   Get,
+  Query,
 } from '@nestjs/common';
-// مسیر این ایمپورت‌ها رو بر اساس ساختار پروژه‌ات تنظیم کن:
 import { ActiveUser } from '#src/auth/decorators/active-user.decorator';
 
 import { ExpertsService } from '../providers/experts.service';
+
 import { CreateExpertDto } from '../dto/create-expert.dto';
 import { UpdateExpertDto } from '../dto/update-expert.dto';
 import { UpdateExpertAvailabilityDto } from '../dto/update-expert-availability.dto';
+import { SearchExpertsDto } from '../dto/search-experts.dto';
+import { ExpertSearchService } from '../providers/ExpertSearchService';
+import { Auth } from '#src/auth/decorators/auth.decorator';
+import { AuthType } from '#src/auth/enums/auth-type.enum';
 
 @Controller('experts')
 export class ExpertsController {
-  constructor(private readonly expertsService: ExpertsService) {}
+  constructor(
+    private readonly expertsService: ExpertsService,
+    private readonly expertSearchService: ExpertSearchService,
+  ) {}
+  @Auth(AuthType.None)
+  @Get('search')
+  @HttpCode(HttpStatus.OK)
+  async searchExperts(@Query() searchExpertsDto: SearchExpertsDto) {
+    const experts = await this.expertSearchService.search(searchExpertsDto);
+
+    return {
+      message: 'Nearby experts found successfully! 🗺️🔍',
+      data: experts,
+    };
+  }
+
   @Get('me')
   @HttpCode(HttpStatus.OK)
   async getMyProfile(@ActiveUser('sub') userId: number) {
-    // مستقیم می‌فرستیم برای سرویسی که نوشتیم
     const expertProfile = await this.expertsService.getProfile(userId);
 
-    // یه پاسخ خوشگل و مرتب برمی‌گردونیم
     return {
-      message: 'پروفایل شما با موفقیت دریافت شد. 🎉',
+      message: 'Profile retrieved successfully. 🎉',
       data: expertProfile,
     };
   }
-  //
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createExpert(
@@ -43,10 +61,11 @@ export class ExpertsController {
       currentUserId,
     );
     return {
-      message: 'پروفایل متخصص با موفقیت ایجاد شد! 👷‍♂️',
+      message: 'Expert profile created successfully! 👷‍♂️',
       data: expert,
     };
   }
+
   @Patch('me')
   async update(
     @Body() updateExpertDto: UpdateExpertDto,
@@ -66,10 +85,11 @@ export class ExpertsController {
     );
 
     return {
-      message: 'وضعیت متخصص با موفقیت تغییر کرد.',
+      message: 'Expert availability status updated successfully. 🔄',
       data: result,
     };
   }
+
   @Delete('me')
   async remove(@ActiveUser('sub') userId: number) {
     return this.expertsService.remove(userId);

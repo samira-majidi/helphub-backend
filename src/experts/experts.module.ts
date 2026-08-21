@@ -11,6 +11,7 @@ import { User } from '#src/users/user.entity';
 import { UploadModule } from '#src/common/upload/upload.module';
 import { CategoriesController } from './controller/categories.controller';
 import { AuthModule } from '#src/auth/auth.module';
+import { ExpertSearchService } from './providers/ExpertSearchService';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { AuthModule } from '#src/auth/auth.module';
     AuthModule,
   ],
   controllers: [ExpertsController, CategoriesController],
-  providers: [ExpertsService, ExpertsGateway],
+  providers: [ExpertsService, ExpertsGateway, ExpertSearchService],
   exports: [ExpertsService],
 })
 export class ExpertsModule {}

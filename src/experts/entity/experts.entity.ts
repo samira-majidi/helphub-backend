@@ -29,7 +29,7 @@ export class Expert {
 
   @Index({ spatial: true })
   @Column({
-    type: 'geometry',
+    type: 'geography',
     spatialFeatureType: 'Point',
     srid: 4326,
     nullable: true,
