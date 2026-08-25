@@ -322,4 +322,18 @@ export class ExpertsService {
 
     return expert;
   }
+  public async getExpertById(expertId: string): Promise<Expert> {
+    const expert = await this.expertRepository.findOne({
+      where: { id: expertId },
+      relations: ['category', 'avatar', 'user'],
+    });
+
+    if (!expert) {
+      throw new NotFoundException(`متخصصی با آیدی ${expertId} پیدا نشد! 🕵️‍♂️`);
+    }
+
+    this.logger.log(`پروفایل متخصص با آیدی ${expertId} با موفقیت واکشی شد.`);
+
+    return expert;
+  }
 }

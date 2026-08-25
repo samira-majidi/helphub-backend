@@ -8,6 +8,8 @@ import {
   Patch,
   Get,
   Query,
+  Param,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ActiveUser } from '#src/auth/decorators/active-user.decorator';
 
@@ -46,6 +48,18 @@ export class ExpertsController {
 
     return {
       message: 'Profile retrieved successfully. 🎉',
+      data: expertProfile,
+    };
+  }
+
+  @Auth(AuthType.None)
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async getExpertById(@Param('id', ParseUUIDPipe) expertId: string) {
+    const expertProfile = await this.expertsService.getExpertById(expertId);
+
+    return {
+      message: 'Expert profile retrieved successfully! 🎯',
       data: expertProfile,
     };
   }
