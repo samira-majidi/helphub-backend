@@ -65,4 +65,53 @@ export class UserService {
       );
     }
   }
+  public async getUserProfileById(userId: number) {
+    // گرفتن یوزر به همراه پروفایل متخصص و جدول آپلود (فقط برای متخصص)
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: [
+        'expert', // گرفتن اطلاعات پایه متخصص
+        'expert.avatar', // Join با جدول Upload برای گرفتن عکس متخصص
+        'expert.category', // Join با جدول دسته‌بندی
+      ],
+    });
+
+    if (!user) {
+      throw new NotFoundException('کاربر مورد نظر یافت نشد!');
+    }
+
+    // تشخیص اینکه کاربر متخصص هست یا نه
+    const isSpecialist = !!user.expert;
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+
+      // --- فیلدهای مشترک و پایه ---
+      // طبق انتیتی شما اسم این فیلد name هست نه firstName
+      name: user.name,
+      lastName: user.lastName,
+
+      // --- مدیریت هوشمند آواتار ---
+      // ⚠️ توجه: کلمه `path` در خط زیر رو با فیلد درست در Upload Entity خودت (مثل filename یا fileUrl) عوض کن
+      avatarUrl:
+        isSpecialist && user.expert?.avatar ? user.expert.avatar.path : null, // چون کاربر عادی آواتار نداره، برای کاربران عادی null برمی‌گرده
+
+      // --- فیلدهای مخصوص متخصص (اگر کاربر عادی باشه همگی null میشن) ---
+      bio: isSpecialist ? user.expert.bio : null,
+      rating: isSpecialist ? Number(user.expert.rating) : null,
+      availabilityStatus: isSpecialist ? user.expert.availabilityStatus : null,
+      location: isSpecialist ? user.expert.location : null,
+
+      // فقط در صورتی که متخصص باشه و دسته‌بندی داشته باشه برمی‌گردونه
+      category:
+        isSpecialist && user.expert.category
+          ? {
+              id: user.expert.category.id,
+              // name: user.expert.category.name
+            }
+          : null,
+    };
+  }
 }

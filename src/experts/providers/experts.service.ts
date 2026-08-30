@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as GeoJSON from 'geojson';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
 import { Expert } from '../entity/experts.entity';
 import { User } from '#src/users/user.entity';
@@ -125,7 +125,32 @@ export class ExpertsService {
       return savedExpert;
     });
   }
+  @OnEvent('specialist.registered')
+  async handleSpecialistRegisteredEvent(user: User) {
+    try {
+      this.logger.log(
+        `📥 Registration event received for user: ${user.email} (ID: ${user.id})`,
+      );
 
+      // ساخت پروفایل متصل به کاربر (فقط با رابطه user)
+      const expertProfile = this.expertRepository.create({
+        user: { id: user.id },
+      });
+
+      const savedProfile = await this.expertRepository.save(expertProfile);
+
+      this.logger.log(
+        `🎉 Initial expert profile successfully created! [User ID: ${user.id} | Expert ID: ${savedProfile.id}]`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `❌ Error automatically creating expert profile for user ${user?.id}: ${error.message}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        error.stack,
+      );
+    }
+  }
   public async update(
     updateExpertDto: UpdateExpertDto,
     userId: number,

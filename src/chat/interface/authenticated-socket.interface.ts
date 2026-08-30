@@ -7,6 +7,7 @@ export interface ClientToServerEvents {
   sendMessage: (payload: { roomId: string; content: string }) => void;
 
   typing: (payload: { roomId: string; isTyping: boolean }) => void;
+  mark_as_read: (payload: { roomId: string }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -27,6 +28,11 @@ export interface ServerToClientEvents {
     message: string;
     metadata?: Record<string, any>;
     createdAt: Date;
+  }) => void;
+  messages_read: (payload: {
+    roomId: string;
+    userId: string;
+    readAt: Date | string;
   }) => void;
 }
 

@@ -36,13 +36,10 @@ export class ChatGateway
   }
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async handleConnection(client: AuthenticatedSocket) {
-    // ۱. متد کلاس پدر رو مستقیماً صدا می‌زنیم (بدون if)
     super.handleConnection(client);
 
-    // ۲. چک کردن آیدی هم از data و هم از خود کلاینت تا خیالمون راحت باشه
     const userId = client.user?.sub || client.data?.user?.sub;
 
-    // لاگ برای دیباگ که مطمئن بشیم آیدی رو داریم
     if (!userId) {
       this.logger.warn(
         `Client ${client.id} connected but client.user is missing!`,
@@ -56,13 +53,11 @@ export class ChatGateway
   }
 
   async handleDisconnect(client: AuthenticatedSocket) {
-    // صدا زدن متد کلاس پدر با await (بدون if)
     await super.handleDisconnect(client);
 
     const userId = client.user?.sub || client.data?.user?.sub;
     if (!userId) return;
 
-    // بقیه کدهای دیس‌کانکت...
     await this.redisService.del(`user:${userId}:status`);
     await this.chatService.updateUserLastSeen(userId);
 
@@ -74,6 +69,7 @@ export class ChatGateway
     });
     this.logger.log(`🔴 User ${userId} is Offline`);
   }
+
   @SubscribeMessage('joinDirectRoom')
   async handleJoinDirectRoom(
     @MessageBody() data: JoinDirectRoomDto,
@@ -88,6 +84,17 @@ export class ChatGateway
     const roomName = `room_${room.id}`;
     client.join(roomName);
 
+    // ۱. آپدیت زمان بازدید دیتابیس به محض ورود کاربر
+    const readAtIso = new Date().toISOString();
+    await this.chatService.updateRoomLastReadAt(room.id, Number(currentUserId));
+
+    // ۲. اطلاع به طرف مقابل در اتاق سوکت که پیام‌هایش خوانده شد
+    client.to(roomName).emit('messages_read', {
+      roomId: room.id,
+      userId: String(currentUserId),
+      readAt: readAtIso,
+    });
+
     const lastSeenStr = await this.redisService.get(
       `user:${data.targetUserId}:last_seen`,
     );
@@ -97,11 +104,16 @@ export class ChatGateway
       `user:${data.targetUserId}:status`,
     );
     const isTargetOnline = targetStatus === 'online';
-    this.logger.log(
-      `User ${currentUserId} joined direct room: ${roomName} with User ${data.targetUserId} status: ${targetStatus}`,
+    const targetMember = await this.chatService.getRoomMember(
+      room.id,
+      data.targetUserId,
     );
+    const targetUserLastReadAt = targetMember?.last_read_at
+      ? targetMember.last_read_at.toISOString()
+      : null;
+
     this.logger.log(
-      `User ${currentUserId} joined direct room: ${roomName} with User ${data.targetUserId}`,
+      `User ${currentUserId} joined direct room: ${roomName} with User ${data.targetUserId} status: ${targetStatus} and marked messages as read`,
     );
 
     return {
@@ -111,14 +123,45 @@ export class ChatGateway
         roomName,
         targetUserLastSeen,
         isTargetOnline,
+        targetUserLastReadAt,
         message: 'Joined successfully',
       },
     };
   }
 
+  @SubscribeMessage('leaveRoom')
+  async handleLeaveRoom(
+    @MessageBody() payload: { roomId: string },
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @ActiveUser('sub') currentUserId: number,
+  ) {
+    const roomName = `room_${payload.roomId}`;
+
+    try {
+      const readAtIso = new Date().toISOString();
+      await this.chatService.updateRoomLastReadAt(
+        payload.roomId,
+        Number(currentUserId),
+      );
+
+      client.leave(roomName);
+
+      client.to(roomName).emit('messages_read', {
+        roomId: payload.roomId,
+        userId: String(currentUserId),
+        readAt: readAtIso,
+      });
+
+      this.logger.log(`User ${currentUserId} left room: ${roomName}`);
+      return { status: 'left_room', roomId: payload.roomId };
+    } catch (error) {
+      this.logger.error(`Error leaving room ${payload.roomId}`, error);
+      throw new WsException('Failed to leave room');
+    }
+  }
+
   @SubscribeMessage('sendDirectMessage')
   async handleDirectMessage(
-    // برای تمیزی بیشتر در آینده می‌تونی این آبجکت رو تبدیل به SendDirectMessageDto کنی
     @MessageBody() payload: SendDirectMessageDto,
     @ConnectedSocket() client: AuthenticatedSocket,
     @ActiveUser('sub') currentUserId: number,
@@ -126,36 +169,64 @@ export class ChatGateway
     try {
       const roomName = `room_${payload.roomId}`;
       console.log('Received in Gateway:', payload);
-      // ۱. ذخیره پیام واقعی در دیتابیس (با تبدیل صریح به عدد برای جلوگیری از خطای TypeORM)
+
       const savedMessage = await this.chatService.saveDirectMessage(
         payload.roomId,
         Number(currentUserId),
         payload.content,
-        payload.type, // پاس دادن type
+        payload.type,
         payload.imageId,
         payload.audioId,
       );
 
-      // ۲. برودکست کردن پیامِ ذخیره شده به همه اعضای اتاق
       this.server.to(roomName).emit('newMessage', savedMessage);
 
-      // ثبت لاگ برای دیباگ راحت‌تر
       this.logger.log(`User ${currentUserId} sent a message to ${roomName}`);
 
-      // ۳. ارسال تاییدیه (Acknowledgement) به فرستنده
       return { status: 'success', data: savedMessage };
     } catch (error) {
       this.logger.error(`Error saving direct message in`, error);
       throw new WsException('Failed to save and send message');
     }
   }
+
   @SubscribeMessage('typing')
   handleTyping(
     @MessageBody() payload: { roomId: string; isTyping: boolean },
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
     const roomName = `room_${payload.roomId}`;
-    // ارسال وضعیت تایپ به همه اعضای اتاق به جز کسی که داره تایپ می‌کنه
     client.to(roomName).emit('userTyping', { isTyping: payload.isTyping });
+  }
+
+  @SubscribeMessage('mark_as_read')
+  async handleMarkAsRead(
+    @MessageBody() payload: { roomId: string },
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @ActiveUser('sub') currentUserId: number,
+  ) {
+    const roomName = `room_${payload.roomId}`;
+
+    try {
+      const readAtIso = new Date().toISOString();
+      await this.chatService.updateRoomLastReadAt(
+        payload.roomId,
+        Number(currentUserId),
+      );
+
+      client.to(roomName).emit('messages_read', {
+        roomId: payload.roomId,
+        userId: String(currentUserId),
+        readAt: readAtIso,
+      });
+
+      return { status: 'success', readAt: readAtIso };
+    } catch (error) {
+      this.logger.error(
+        `Error marking messages as read for room ${payload.roomId}`,
+        error,
+      );
+      client.emit('error', { message: 'Failed to mark messages as read' });
+    }
   }
 }

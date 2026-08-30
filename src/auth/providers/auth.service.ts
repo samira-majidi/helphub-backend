@@ -5,19 +5,19 @@ import { CreatUserDto } from '#src/users/dtos/creat-user.dto';
 import { UserService } from '#src/users/providers/user-service';
 import { SignInDto } from '../dto/sing-in.dto';
 import { SignInProvider } from './sing-in.provider';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UserService,
     private readonly signInProvider: SignInProvider,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   public async registerUser(dto: CreatUserDto) {
-    // ۱. ساخت کاربر با نقش USER
     const user = await this.usersService.createUser(dto, UserRole.USER);
 
-    // ۲. تولید بلافاصله‌ی توکن‌ها
     const tokens = await this.signInProvider.signIn({
       email: dto.email,
       password: dto.password,
@@ -29,13 +29,17 @@ export class AuthService {
       ...tokens,
     };
   }
+
   public async registerSpecialist(dto: CreatUserDto) {
-    // استفاده از نقش جدید
     const user = await this.usersService.createUser(dto, UserRole.SPECIALIST);
+
+    this.eventEmitter.emit('specialist.registered', user);
+
     const tokens = await this.signInProvider.signIn({
       email: dto.email,
       password: dto.password,
     });
+
     return { user, ...tokens };
   }
 

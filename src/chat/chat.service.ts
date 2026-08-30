@@ -88,6 +88,7 @@ export class ChatService {
         queryRunner.manager.create(RoomMember, {
           room_id: savedRoom.id,
           user_id: userId,
+          last_read_at: new Date(),
         }),
       );
 
@@ -118,6 +119,7 @@ export class ChatService {
       await queryRunner.release();
     }
   }
+
   async saveDirectMessage(
     roomId: string,
     senderId: number,
@@ -126,7 +128,6 @@ export class ChatService {
     imageId?: number,
     audioId?: number,
   ): Promise<Message> {
-    // ۱. ساخت و ذخیره اولیه پیام در دیتابیس
     const newMessage = this.messageRepository.create({
       room_id: roomId,
       sender_id: senderId,
@@ -138,7 +139,6 @@ export class ChatService {
 
     const savedMessage = await this.messageRepository.save(newMessage);
 
-    // ۲. فراخوانی مجدد پیام همراه با روابط عکس و صدا
     const messageWithRelations = await this.messageRepository.findOne({
       where: { id: savedMessage.id },
       relations: ['image', 'audio'],
@@ -148,7 +148,6 @@ export class ChatService {
       return savedMessage;
     }
 
-    // ۳. تولید Presigned URL (همون کدهای خودت)
     if (messageWithRelations.type === 'IMAGE' && messageWithRelations.image) {
       messageWithRelations.image.path =
         await this.uploadToAwsProvider.getPresignedUrl(
@@ -164,7 +163,6 @@ export class ChatService {
         );
     }
 
-    // 🌟 ۴. پیدا کردن گیرنده پیام برای ارسال نوتیفیکیشن
     try {
       const receiver = await this.roomMemberRepository
         .createQueryBuilder('roomMember')
@@ -173,14 +171,13 @@ export class ChatService {
         .getOne();
 
       if (receiver) {
-        // 🌟 ۵. شلیک رویداد نوتیفیکیشن
         this.eventEmitter.emit('notification.create', {
-          userId: String(receiver.user_id), // اینجا اگر آیدی عدده به استرینگ تبدیل کردیم تا گیر نده
-          type: 'NEW_MESSAGE', // مقدار تایپت رو از Enum خودت بذار (مثلا NotificationType.NEW_MESSAGE)
+          userId: String(receiver.user_id),
+          type: 'NEW_MESSAGE',
           title: 'new message',
           message: content
             ? content.substring(0, 50)
-            : 'شما یک پیام جدید دارید', // پیش‌نمایش پیام
+            : 'شما یک پیام جدید دارید',
           metadata: {
             roomId: roomId,
             messageId: savedMessage.id,
@@ -192,14 +189,12 @@ export class ChatService {
         );
       }
     } catch (error) {
-      // خطا در ارسال نوتیفیکیشن نباید کل پروسه چت رو متوقف کنه
       this.logger.error(
         `Failed to emit notification for room ${roomId}`,
         error,
       );
     }
 
-    // ۶. برگرداندن پیام کامل برای ارسال به سوکت چت
     return messageWithRelations;
   }
 
@@ -218,6 +213,7 @@ export class ChatService {
       .orderBy('message.created_at', 'DESC')
       .addOrderBy('message.id', 'DESC')
       .take(limit + 1);
+
     if (cursor) {
       const cursorMessage = await this.messageRepository.findOne({
         where: { id: cursor },
@@ -258,7 +254,6 @@ export class ChatService {
           updatedImage = { ...msg.image, path: presignedUrl };
         }
 
-        // 👈 ۲. هندل کردن لینک ویس‌ها (جدید)
         if (msg.audio && msg.audio.isPrivate) {
           const presignedUrl = await this.uploadToAwsProvider.getPresignedUrl(
             msg.audio.name,
@@ -280,6 +275,42 @@ export class ChatService {
     };
   }
 
+  async updateRoomLastReadAt(
+    roomId: string,
+    userId: number,
+    readAt: Date = new Date(),
+  ): Promise<void> {
+    try {
+      await this.roomMemberRepository.update(
+        { room_id: roomId, user_id: userId },
+        { last_read_at: readAt },
+      );
+      this.logger.log(
+        `Updated last_read_at for user ${userId} in room ${roomId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to update last_read_at for user ${userId} in room ${roomId}`,
+        error,
+      );
+    }
+  }
+
+  async getUnreadCount(roomId: string, userId: number): Promise<number> {
+    const member = await this.roomMemberRepository.findOne({
+      where: { room_id: roomId, user_id: userId },
+    });
+
+    const lastReadAt = member?.last_read_at || new Date(0);
+
+    return this.messageRepository
+      .createQueryBuilder('message')
+      .where('message.room_id = :roomId', { roomId })
+      .andWhere('message.sender_id != :userId', { userId })
+      .andWhere('message.created_at > :lastReadAt', { lastReadAt })
+      .getCount();
+  }
+
   async updateUserLastSeen(userId: number): Promise<void> {
     const currentTime = Date.now();
     const redisKey = `user:${userId}:last_seen`;
@@ -293,11 +324,14 @@ export class ChatService {
   }
 
   async getUserConversations(userId: number) {
-    return await this.roomRepository
+    const rooms = await this.roomRepository
       .createQueryBuilder('room')
-      .innerJoin('room.members', 'myMember', '"myMember"."user_id" = :userId', {
-        userId,
-      })
+      .innerJoinAndSelect(
+        'room.members',
+        'myMember',
+        '"myMember"."user_id" = :userId',
+        { userId },
+      )
       .innerJoinAndSelect(
         'room.members',
         'otherMember',
@@ -305,6 +339,53 @@ export class ChatService {
         { userId },
       )
       .innerJoinAndSelect('otherMember.user', 'user')
+      .orderBy('room.updated_at', 'DESC')
       .getMany();
+
+    if (rooms.length === 0) return [];
+
+    const roomIds = rooms.map((room) => room.id);
+
+    const lastMessages = await this.messageRepository
+      .createQueryBuilder('message')
+      .select(['message.room_id', 'message.content', 'message.created_at'])
+      .where('message.room_id IN (:...roomIds)', { roomIds })
+      .distinctOn(['message.room_id'])
+      .orderBy('message.room_id', 'ASC')
+      .addOrderBy('message.created_at', 'DESC')
+      .getMany();
+
+    const lastMessagesMap = lastMessages.reduce(
+      (map, msg) => {
+        map[msg.room_id] = msg;
+        return map;
+      },
+      {} as Record<string | number, Message>,
+    );
+
+    // محاسبه هم‌زمان تعداد خوانده‌نشده‌ها برای هر اتاق
+    const conversations = await Promise.all(
+      rooms.map(async (room) => {
+        const latestMsg = lastMessagesMap[room.id];
+        const unreadCount = await this.getUnreadCount(room.id, userId);
+
+        return {
+          ...room,
+          unread_count: unreadCount,
+          last_message: latestMsg ? latestMsg.content : null,
+          last_message_date: latestMsg ? latestMsg.created_at : null,
+        };
+      }),
+    );
+
+    return conversations;
+  }
+  async getRoomMember(
+    roomId: string,
+    userId: number,
+  ): Promise<RoomMember | null> {
+    return this.roomMemberRepository.findOne({
+      where: { room_id: roomId, user_id: userId },
+    });
   }
 }
