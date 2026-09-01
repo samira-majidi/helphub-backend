@@ -1,0 +1,44 @@
+
+
+services:
+  db:
+    image: postgis/postgis:16-3.5-alpine
+    container_name: helphub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 211067ha
+      POSTGRES_DB: helphub_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: helphub-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  api:
+    build: .
+    container_name: helphub-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      # اوررایت کردن آدرس‌ها برای ارتباط کانتینرها در شبکه داکر
+      DATABASE_HOST: db
+      REDIS_HOST: redis
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
