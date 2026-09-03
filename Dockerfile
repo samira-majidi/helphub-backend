@@ -30,8 +30,7 @@ COPY --from=builder /app/node_modules ./node_modules
 # کپی کردن پوشه dist از مرحله builder
 COPY --from=builder /app/dist ./dist
 
-# پورت اجرایی
-EXPOSE 3000
+EXPOSE 8080  
 
 # دستور اجرای سرور
 CMD ["node", "dist/main"]
