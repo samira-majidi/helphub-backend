@@ -28,7 +28,6 @@ import { ChatModule } from './chat/chat.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { NotificationModule } from './notification/notification.module';
 import { ExpertsModule } from './experts/experts.module';
-import { RemoveSensitiveDataInterceptor } from './common/interceptors/removeSensitiveDataInterceptor';
 const ENV = process.env.NODE_ENV;
 @Module({
   imports: [
@@ -85,10 +84,6 @@ const ENV = process.env.NODE_ENV;
     {
       provide: APP_INTERCEPTOR,
       useClass: DataResponseInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: RemoveSensitiveDataInterceptor,
     },
     AccessTokenGuard,
   ],
