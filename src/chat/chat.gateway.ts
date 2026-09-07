@@ -7,7 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Logger, UseFilters } from '@nestjs/common';
+import { HttpException, Logger, UseFilters } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { BaseGateway } from './gateway/base.gateway';
 // import { WsOwnershipGuard } from './gaurd/ws-ownership.guard'; // اگر نیاز بود آن‌کامنت کن
@@ -186,6 +186,19 @@ export class ChatGateway
       return { status: 'success', data: savedMessage };
     } catch (error) {
       this.logger.error(`Error saving direct message in`, error);
+      if (error instanceof HttpException) {
+        throw new WsException(error.message);
+      }
+
+      // بررسی خطاهایی که از قبل WsException بودن
+      if (error instanceof WsException) {
+        throw error;
+      }
+
+      // اگر ارور استاندارد Error جاوااسکریپت بود
+      if (error instanceof Error) {
+        throw new WsException(error.message);
+      }
       throw new WsException('Failed to save and send message');
     }
   }

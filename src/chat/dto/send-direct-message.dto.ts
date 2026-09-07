@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 
 export class SendDirectMessageDto {
@@ -13,6 +14,9 @@ export class SendDirectMessageDto {
 
   @IsString({ message: 'محتوای پیام باید متن باشد.' })
   @IsNotEmpty({ message: 'پیام نمی‌تواند خالی باشد.' })
+  @MaxLength(2000, {
+    message: 'محتوای پیام نمی‌تواند بیشتر از ۲۰۰۰ کاراکتر باشد.',
+  })
   content: string;
 
   @IsOptional()

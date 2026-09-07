@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   BadRequestException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -128,6 +129,17 @@ export class ChatService {
     imageId?: number,
     audioId?: number,
   ): Promise<Message> {
+    const member = await this.roomMemberRepository.findOne({
+      where: {
+        room_id: roomId,
+        user_id: senderId,
+      },
+    });
+
+    if (!member) {
+      throw new ForbiddenException('You are not a member of this room.');
+    }
+    await this.checkDailyMessageLimit(senderId); 
     const newMessage = this.messageRepository.create({
       room_id: roomId,
       sender_id: senderId,
@@ -203,6 +215,16 @@ export class ChatService {
     query: GetMessagesQueryDto,
     currentUserId: number,
   ) {
+    const member = await this.roomMemberRepository.findOne({
+      where: {
+        room_id: roomId,
+        user_id: currentUserId,
+      },
+    });
+
+    if (!member) {
+      throw new ForbiddenException('You are not a member of this room.');
+    }
     const { limit = 20, cursor } = query;
 
     const queryBuilder = this.messageRepository
@@ -387,5 +409,17 @@ export class ChatService {
     return this.roomMemberRepository.findOne({
       where: { room_id: roomId, user_id: userId },
     });
+  }
+
+  private async checkDailyMessageLimit(userId: number): Promise<void> {
+    const key = `chat:daily-message-count:${userId}`;
+
+    const count = await this.redisService.increment(key, 86400);
+
+    if (count > 20) {
+      throw new ForbiddenException(
+        'You have reached your daily message limit.',
+      );
+    }
   }
 }

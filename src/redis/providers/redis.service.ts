@@ -45,6 +45,15 @@ export class RedisService implements OnModuleDestroy {
       await this.client.set(key, serialized);
     }
   }
+  async increment(key: string, ttl?: number): Promise<number> {
+    const count = await this.client.incr(key);
+
+    if (count === 1 && ttl) {
+      await this.client.expire(key, ttl);
+    }
+
+    return count;
+  }
   async keys(pattern: string): Promise<string[]> {
     return await this.client.keys(pattern);
   }
