@@ -11,7 +11,6 @@ export class CustomIoAdapter extends IoAdapter {
       },
     };
 
-    // با استفاده از as ServerOptions یا as any مشکل ناسازگاری تایپ حل میشه
     return super.createIOServer(port, globalOptions);
   }
 }

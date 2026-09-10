@@ -10,7 +10,7 @@ import {
 import { HttpException, Logger, UseFilters } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { BaseGateway } from './gateway/base.gateway';
-// import { WsOwnershipGuard } from './gaurd/ws-ownership.guard'; // اگر نیاز بود آن‌کامنت کن
+
 import type { AuthenticatedSocket } from './interface/authenticated-socket.interface';
 import { ActiveUser } from '#src/auth/decorators/active-user.decorator';
 import { ChatService } from './chat.service';
@@ -84,11 +84,9 @@ export class ChatGateway
     const roomName = `room_${room.id}`;
     client.join(roomName);
 
-    // ۱. آپدیت زمان بازدید دیتابیس به محض ورود کاربر
     const readAtIso = new Date().toISOString();
     await this.chatService.updateRoomLastReadAt(room.id, Number(currentUserId));
 
-    // ۲. اطلاع به طرف مقابل در اتاق سوکت که پیام‌هایش خوانده شد
     client.to(roomName).emit('messages_read', {
       roomId: room.id,
       userId: String(currentUserId),
@@ -190,12 +188,10 @@ export class ChatGateway
         throw new WsException(error.message);
       }
 
-      // بررسی خطاهایی که از قبل WsException بودن
       if (error instanceof WsException) {
         throw error;
       }
 
-      // اگر ارور استاندارد Error جاوااسکریپت بود
       if (error instanceof Error) {
         throw new WsException(error.message);
       }

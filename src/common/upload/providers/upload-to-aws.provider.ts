@@ -103,7 +103,6 @@ export class UploadToAwsProvider {
         Key: fileKey,
       });
 
-      // تولید لینک با اعتبار ۱ ساعت (۳۶۰۰ ثانیه)
       const signedUrl = await getSignedUrl(this.s3Client, command, {
         expiresIn: 3600,
       });

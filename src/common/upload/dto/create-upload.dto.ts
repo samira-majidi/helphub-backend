@@ -7,13 +7,12 @@ export class CreateUploadDto {
 
   @IsString()
   @Matches(/^(image\/png|image\/jpeg|image\/webp)$/, {
-    message: 'فقط فرمت‌های png, jpeg و webp مجاز هستند',
+    message: 'Only png, jpeg and webp formats are allowed',
   })
   contentType: string;
 
-  // 👇 این قسمت اضافه میشه
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true) // تبدیل استرینگ 'true' از FormData به بولین
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isPrivate?: boolean;
 }

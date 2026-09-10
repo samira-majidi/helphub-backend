@@ -8,7 +8,6 @@ interface RedisConfig {
   password?: string;
 }
 
-// تعریف نوع کل Config
 interface AppConfig {
   redis: RedisConfig;
 }

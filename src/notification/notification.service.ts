@@ -9,7 +9,7 @@ import { Notification } from './entities/notification.entity';
 
 @Injectable()
 export class NotificationService {
-  private readonly logger = new Logger(NotificationService.name); // 👈 اضافه شدن لاگر
+  private readonly logger = new Logger(NotificationService.name);
 
   constructor(
     @InjectRepository(Notification)
@@ -26,19 +26,15 @@ export class NotificationService {
         return;
       }
 
-      // ۱. ابتدا نمونه اولیه را از روی payload می‌سازیم
       const notification = this.notificationRepo.create(payload);
 
-      // ۲. به صورت دستی و صریح، رابطه کاربر را ست می‌کنیم
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       notification.user = { id: payload.userId } as any;
 
-      // ۳. ذخیره در دیتابیس
       const savedNotification = await this.notificationRepo.save(notification);
 
-      // ۴. ارسال از طریق سوکت
       this.notificationGateway.sendToUser(
-        payload.userId.toString(), // 👈 مستقیما از payload استفاده کن تا خطای undefined نگیری
+        payload.userId.toString(),
         savedNotification,
       );
     } catch (error) {

@@ -46,16 +46,16 @@ export class ExpertSearchService {
         radius: radius,
       });
 
-    // Apply category filter if provided
+
     if (categoryId) {
       query.andWhere('category.id = :categoryId', { categoryId });
       this.logger.verbose(`Applied category filter with ID: ${categoryId}`);
     }
 
     query
-      // Priority 1: Expert status (AVAILABLE > BUSY > OFF_SHIFT)
+
       .addSelect(
-        // تغییر مهم: اضافه کردن دابل‌کوتیشن دور اسم جدول و ستون
+
         `CASE "expert"."availabilityStatus"
           WHEN '${ExpertAvailabilityStatus.AVAILABLE}' THEN 1
           WHEN '${ExpertAvailabilityStatus.BUSY}' THEN 2
@@ -65,7 +65,7 @@ export class ExpertSearchService {
         'status_order',
       )
       .addSelect(
-        // بهتره برای location هم همین کار رو بکنیم تا ساختار یکدست بشه
+
         `"expert"."location" <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography`,
         'distance',
       )

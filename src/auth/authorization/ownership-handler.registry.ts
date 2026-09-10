@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-// اینجا یک مرکز ثبت است
-// این کلاس وظیفه نگهداری توابع مالکیت هر ماژول را دارد تا گارد بتواند از آن‌ها استفاده کند.
+
 type OwnershipHandler = (
   entityId: string | number,
   userId: number,

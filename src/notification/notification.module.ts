@@ -3,13 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationGateway } from './gateway/NotificationGateway';
 import { NotificationService } from './notification.service';
 import { Notification } from './entities/notification.entity';
-import { AuthModule } from '../auth/auth.module'; // مسیر رو بر اساس پروژه‌ات تنظیم کن
+import { AuthModule } from '../auth/auth.module'; 
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Notification]),
-    AuthModule, // جایگزین JwtModule خام
-  ],
+  imports: [TypeOrmModule.forFeature([Notification]), AuthModule],
   providers: [NotificationGateway, NotificationService],
   exports: [NotificationService],
 })

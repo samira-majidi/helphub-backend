@@ -6,7 +6,7 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
-import { CreatUserDto } from './dtos/creat-user.dto';
+import { CreatUserDto } from './dtos/create-user.dto';
 import { UserService } from './providers/user-service';
 import { UserRole } from '#src/common/enum/user-role.enum';
 import { Auth } from '#src/auth/decorators/auth.decorator';

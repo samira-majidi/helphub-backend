@@ -26,12 +26,10 @@ export class UploadService {
     isPrivate: boolean = false,
   ) {
     try {
-      // ✅ اول چک کن که file وجود داره
       if (!file) {
         throw new BadRequestException('No file uploaded');
       }
 
-      // ✅ بعد چک کن که mimetype وجود داره
       if (!file.mimetype) {
         throw new BadRequestException('File mimetype is missing');
       }
@@ -49,7 +47,7 @@ export class UploadService {
         'audio/mpeg',
         'audio/mp4',
         'audio/wav',
-      ]; // 👈 فرمت‌های ویس
+      ];
       const allowedMimeTypes = [...imageMimeTypes, ...audioMimeTypes];
 
       if (!allowedMimeTypes.includes(file.mimetype)) {
@@ -58,7 +56,6 @@ export class UploadService {
         );
       }
 
-      // آپلود به Arvan Cloud
       const uploadResult = await this.uploadToAwsProvider.fileUpload(
         file,
         isPrivate,
@@ -66,7 +63,7 @@ export class UploadService {
       const currentFileType = file.mimetype.startsWith('audio/')
         ? fileType.AUDIO
         : fileType.IMAGE;
-      // ساخت object نهایی
+
       const uploadFile: UploadFile = {
         name: uploadResult.key,
         path: uploadResult.url,

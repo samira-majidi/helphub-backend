@@ -8,8 +8,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { AuthService } from './providers/auth.service';
-import { CreatUserDto } from '#src/users/dtos/creat-user.dto';
-import { SignInDto } from './dto/sing-in.dto';
+import { CreatUserDto } from '#src/users/dtos/create-user.dto';
+import { SignInDto } from './dto/sign-in.dto';
 import { Auth } from './decorators/auth.decorator';
 import { AuthType } from './enums/auth-type.enum';
 import { RefreshTokenProvider } from './providers/refresh-token.provider';
@@ -28,7 +28,7 @@ export class AuthController {
   }
 
   @Auth(AuthType.None)
-  @Post('register-specialist') // تغییر روت به متخصص
+  @Post('register-specialist')
   public registerSpecialist(@Body() createUserDto: CreatUserDto) {
     return this.authService.registerSpecialist(createUserDto);
   }

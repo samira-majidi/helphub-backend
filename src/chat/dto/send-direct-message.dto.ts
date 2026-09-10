@@ -8,26 +8,26 @@ import {
 } from 'class-validator';
 
 export class SendDirectMessageDto {
-  @IsString({ message: 'شناسه اتاق باید یک رشته (String) باشد.' })
-  @IsNotEmpty({ message: 'شناسه اتاق نمی‌تواند خالی باشد.' })
+  @IsString({ message: 'Room ID must be a string.' })
+  @IsNotEmpty({ message: 'Room ID cannot be empty.' })
   roomId: string;
 
-  @IsString({ message: 'محتوای پیام باید متن باشد.' })
-  @IsNotEmpty({ message: 'پیام نمی‌تواند خالی باشد.' })
+  @IsString({ message: 'Message content must be a string.' })
+  @IsNotEmpty({ message: 'Message content cannot be empty.' })
   @MaxLength(2000, {
-    message: 'محتوای پیام نمی‌تواند بیشتر از ۲۰۰۰ کاراکتر باشد.',
+    message: 'Message content cannot exceed 2000 characters.',
   })
   content: string;
 
   @IsOptional()
-  @IsEnum(['TEXT', 'IMAGE', 'AUDIO'], { message: 'نوع پیام نامعتبر است.' })
+  @IsEnum(['TEXT', 'IMAGE', 'AUDIO'], { message: 'Invalid message type.' })
   type?: 'TEXT' | 'IMAGE' | 'AUDIO';
 
   @IsOptional()
-  @IsNumber({}, { message: 'شناسه تصویر باید عدد باشد.' })
+  @IsNumber({}, { message: 'Image ID must be a number.' })
   imageId?: number;
 
   @IsOptional()
-  @IsNumber({}, { message: 'شناسه صوت باید عدد باشد.' })
+  @IsNumber({}, { message: 'Audio ID must be a number.' })
   audioId?: number;
 }

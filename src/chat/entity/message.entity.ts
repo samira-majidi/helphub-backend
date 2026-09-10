@@ -32,7 +32,6 @@ export class Message {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  // روابط
   @ManyToOne(() => Room, (room) => room.messages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'room_id' })
   room: Room;

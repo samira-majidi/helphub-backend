@@ -18,9 +18,6 @@ export class GalleryManagerService {
     private readonly uploadRepository: Repository<Upload>,
   ) {}
 
-  /**
-   * اعتبارسنجی و دریافت فایل‌های معتبر
-   */
   async validateAndGetImages(
     imageIds: number[],
     userId: number,
@@ -55,9 +52,6 @@ export class GalleryManagerService {
     return attachedFiles;
   }
 
-  /**
-   * Mark کردن فایل‌ها به عنوان attached
-   */
   async markAsAttached(
     imageIds: number[],
     manager?: EntityManager,
@@ -71,9 +65,6 @@ export class GalleryManagerService {
     this.logger.debug(`Marked ${imageIds.length} images as attached`);
   }
 
-  /**
-   * آزاد کردن فایل‌های قبلی
-   */
   async releaseImages(
     images: Upload[],
     manager?: EntityManager,
@@ -90,9 +81,6 @@ export class GalleryManagerService {
     this.logger.debug(`Released ${imageIds.length} images`);
   }
 
-  /**
-   * جایگزینی کامل گالری (برای update)
-   */
   async replaceGallery(
     oldImages: Upload[],
     newImageIds: number[],
@@ -100,10 +88,8 @@ export class GalleryManagerService {
     config: GalleryConfig,
     manager: EntityManager,
   ): Promise<Upload[]> {
-    // 1️⃣ آزاد کردن فایل‌های قبلی
     await this.releaseImages(oldImages, manager);
 
-    // 2️⃣ اعتبارسنجی و دریافت فایل‌های جدید
     const newImages = await this.validateAndGetImages(
       newImageIds,
       userId,
@@ -111,7 +97,6 @@ export class GalleryManagerService {
       manager,
     );
 
-    // 3️⃣ Mark کردن فایل‌های جدید
     await this.markAsAttached(newImageIds, manager);
 
     this.logger.log(
@@ -121,9 +106,6 @@ export class GalleryManagerService {
     return newImages;
   }
 
-  /**
-   * اضافه کردن گالری جدید (برای create)
-   */
   async attachGallery(
     imageIds: number[],
     userId: number,

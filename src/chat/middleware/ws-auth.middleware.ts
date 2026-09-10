@@ -1,6 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { ActiveUserData } from '#src/auth/interfaces/active-user.interface';
-// مسیر این فایل رو بر اساس ساختار پوشه‌های پروژه‌ت تنظیم کن
+
 import { AuthenticatedSocket } from '../interface/authenticated-socket.interface';
 
 type SocketAuthPayload = {
@@ -28,8 +28,6 @@ export const WsAuthMiddleware = (
 
         const payload = await jwtService.verifyAsync<ActiveUserData>(token);
 
-        // اینجا چون AuthenticatedSocket رو پاس دادیم،
-        // تایپ‌اسکریپت دقیقاً می‌دونه client.data شامل user هست.
         client.data = { user: payload };
 
         next();

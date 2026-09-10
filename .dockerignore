@@ -11,7 +11,7 @@ node_modules/
 # Compiled code
 dist/
 
-# Env files (خیلی مهم: فایل‌های محیطی نباید داخل ایمیج هاردکد بشن)
+# Env files
 .env
 .env.test
 .env.production

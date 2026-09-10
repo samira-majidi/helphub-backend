@@ -28,7 +28,6 @@ export class Room {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 
-  // روابط (Relations)
   @OneToMany(() => RoomMember, (roomMember) => roomMember.room)
   members: RoomMember[];
 

@@ -40,7 +40,7 @@ export class PermissionGuard implements CanActivate {
     if (!userRole) {
       throw new ForbiddenException('role missing in jwt');
     }
-    //استخراج تمام مجوزهایی که یوزر داره
+
     const permissionS = RolePermissions[userRole];
 
     if (!permissionS) {

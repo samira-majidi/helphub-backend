@@ -17,8 +17,6 @@ export class AuthenticationGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly accessTokenGuard: AccessTokenGuard,
   ) {
-    //آن `[AuthType.Bearer]` آرایه نیست؛ یعنی مقدار `AuthType.Bearer` را حساب کن و
-    // از آن به‌عنوان **کلید (key)** آبجکت استفاده کن.
     this.authTypeGuardMap = {
       [AuthType.Bearer]: this.accessTokenGuard,
 

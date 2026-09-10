@@ -37,16 +37,14 @@ export abstract class BaseGateway
   }
 
   async handleDisconnect(client: AuthenticatedSocket) {
-    // 👈 async شد
     const userId = client.data?.user?.sub;
     this.logger.log(`Client disconnected: ${client.id}`);
 
-    // 👈 لاجیک آپدیت last_seen اومد اینجا
     if (userId) {
       const currentTime = Date.now();
       const redisKey = `user:${userId}:last_seen`;
       try {
-        await this.redisService.set(redisKey, currentTime, 604800); // انقضا: ۷ روز
+        await this.redisService.set(redisKey, currentTime, 604800);
       } catch (error) {
         this.logger.error(
           `Failed to update last_seen for user ${userId}`,

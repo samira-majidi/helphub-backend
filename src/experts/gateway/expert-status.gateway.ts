@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '#src/redis/providers/redis.service';
 import { WsCatchAllFilter } from '#src/chat/filter/ws-exception.filter';
 
-@WebSocketGateway({ namespace: '/experts' }) // نِیم‌اسپیس اختصاصی برای نقشه و لیست متخصصین
+@WebSocketGateway({ namespace: '/experts' })
 @UseFilters(new WsCatchAllFilter())
 export class ExpertsGateway extends BaseGateway {
   protected readonly logger = new Logger(ExpertsGateway.name);
@@ -24,14 +24,12 @@ export class ExpertsGateway extends BaseGateway {
     this.logger.log('🚀 ExpertsGateway is initialized!');
   }
 
-  // 🎧 شنیدن ایونتی که در ExpertsService شلیک کردی
   @OnEvent('expert.status.updated')
   handleExpertStatusUpdated(payload: {
     expertId: string;
     userId: number;
     status: string;
   }) {
-    // 📢 پخش کردن وضعیت جدید برای همه کلاینت‌هایی که به این نِیم‌اسپیس وصل هستند
     this.server.emit('statusChanged', payload);
 
     this.logger.log(

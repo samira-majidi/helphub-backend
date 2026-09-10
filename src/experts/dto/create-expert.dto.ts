@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 
 export class CreateExpertDto {
-  @IsNotEmpty({ message: 'انتخاب دسته‌بندی شغلی الزامی است' })
+  @IsNotEmpty({ message: 'Category selection is required' })
   @IsInt()
   categoryId: number;
 
@@ -34,6 +34,6 @@ export class CreateExpertDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500, { message: 'بیو نباید بیشتر از ۵۰۰ کاراکتر باشد' })
+  @MaxLength(500, { message: 'Bio cannot exceed 500 characters' })
   bio?: string;
 }

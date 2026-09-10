@@ -25,7 +25,6 @@ export class RoomMember {
   @Column({ type: 'timestamptz', nullable: true })
   last_read_at: Date;
 
-  // روابط
   @ManyToOne(() => Room, (room) => room.members, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'room_id' })
   room: Room;

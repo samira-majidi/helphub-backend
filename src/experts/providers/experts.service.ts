@@ -14,7 +14,7 @@ import { User } from '#src/users/user.entity';
 import { Category } from '../entity/categories.entity';
 import { CreateExpertDto } from '../dto/create-expert.dto';
 import { UpdateExpertDto } from '../dto/update-expert.dto';
-import { UpdateExpertAvailabilityDto } from '../dto/update-expert-availability.dto'; // حتما مسیر دقیق این Dto را چک کن
+import { UpdateExpertAvailabilityDto } from '../dto/update-expert-availability.dto';
 import { Upload } from '#src/common/upload/entity/upload.entity';
 import { GalleryManagerService } from '#src/common/upload/providers/gallery-manager.service';
 import { JobTitle } from '../enum/job-title.enum';
@@ -31,27 +31,26 @@ export class ExpertsService {
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     private readonly galleryManager: GalleryManagerService,
-    private readonly eventEmitter: EventEmitter2, // تزریق ایونت‌امیتر برای ارسال رویدادها 🚀
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   async onModuleInit() {
     try {
       const count = await this.categoryRepository.count();
 
-      // اگر جدول خالی بود، مقادیر رو از Enum می‌خونیم و ذخیره می‌کنیم
       if (count === 0) {
-        this.logger.log(
-          '🌱 دیتابیس خالیه! در حال ساخت دسته‌بندی‌های پیش‌فرض...',
-        );
+        this.logger.log('🌱 Database is empty! Seeding default categories...');
 
         const defaultCategories = Object.values(JobTitle).map((jobTitle) => ({
           name: jobTitle,
         }));
 
         await this.categoryRepository.save(defaultCategories);
-        this.logger.log('✅ دسته‌بندی‌ها با موفقیت در دیتابیس ثبت شدند!');
+        this.logger.log(
+          '✅ Default categories successfully seeded into database!',
+        );
       }
     } catch (error) {
-      this.logger.error('❌ خطا در ساخت دسته‌بندی‌های پیش‌فرض', error);
+      this.logger.error('❌ Error seeding default categories', error);
     }
   }
 
@@ -61,42 +60,37 @@ export class ExpertsService {
   ): Promise<Expert> {
     const { categoryId, imageIds, latitude, longitude, bio } = createExpertDto;
 
-    // ۱. بررسی اینکه آیا کاربر از قبل پروفایل دارد یا خیر
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['expert'],
     });
 
-    if (!user) throw new NotFoundException('کاربر یافت نشد!');
+    if (!user) throw new NotFoundException('User not found!');
     if (user.expert) {
-      throw new BadRequestException('این کاربر از قبل پروفایل متخصص دارد!');
+      throw new BadRequestException('This user already has an expert profile!');
     }
 
-    // ۲. بررسی وجود دسته‌بندی
     const categoryExists = await this.categoryRepository.existsBy({
       id: categoryId,
     });
 
     if (!categoryExists) {
       throw new NotFoundException(
-        `دسته‌بندی شغلی با آیدی ${categoryId} یافت نشد.`,
+        `Job category with ID ${categoryId} not found.`,
       );
     }
 
-    // ۳. استفاده از متد کمکی برای ساخت لوکیشن و اعتبارسنجی آن 🚀
     const location = this.updateLocation(undefined, latitude, longitude);
 
-    // ۴. شروع تراکنش یکپارچه دیتابیس
     return await this.expertRepository.manager.transaction(async (manager) => {
       let avatar: Upload | undefined = undefined;
 
-      // ۵. آپلود و اتصال عکس در صورت وجود
       if (imageIds && imageIds.length > 0) {
         const galleryImages = await this.galleryManager.attachGallery(
           imageIds,
           userId,
           {
-            maxImages: 1, // فقط یک عکس برای پروفایل
+            maxImages: 1,
             entityName: 'Expert',
           },
           manager,
@@ -107,7 +101,6 @@ export class ExpertsService {
         }
       }
 
-      // ۶. ساخت انتیتی جدید متخصص
       const expert = manager.create(Expert, {
         location,
         bio,
@@ -116,7 +109,6 @@ export class ExpertsService {
         avatar,
       });
 
-      // ۷. ذخیره و لاگ
       const savedExpert = await manager.save(expert);
       this.logger.log(
         `Expert profile created successfully for User ID: ${userId} - Expert ID: ${savedExpert.id}`,
@@ -132,7 +124,6 @@ export class ExpertsService {
         `📥 Registration event received for user: ${user.email} (ID: ${user.id})`,
       );
 
-      // ساخت پروفایل متصل به کاربر (فقط با رابطه user)
       const expertProfile = this.expertRepository.create({
         user: { id: user.id },
       });
@@ -157,19 +148,18 @@ export class ExpertsService {
   ): Promise<Expert> {
     const { categoryId, imageIds, latitude, longitude, bio } = updateExpertDto;
 
-    // ۱. پیدا کردن پروفایل متخصص فقط بر اساس آیدی کاربر (توکن)
     const expert = await this.expertRepository.findOne({
       where: { user: { id: userId } },
       relations: ['avatar', 'category'],
     });
 
     if (!expert) {
-      throw new NotFoundException('پروفایل متخصصی برای شما یافت نشد!');
+      throw new NotFoundException('Expert profile not found for this user!');
     }
     if (bio !== undefined) {
       expert.bio = bio;
     }
-    // ۲. بررسی وجود دسته‌بندی جدید در صورت ارسال
+
     if (categoryId) {
       const categoryExists = await this.categoryRepository.existsBy({
         id: categoryId,
@@ -177,20 +167,17 @@ export class ExpertsService {
 
       if (!categoryExists) {
         throw new NotFoundException(
-          `دسته‌بندی شغلی با آیدی ${categoryId} یافت نشد.`,
+          `Job category with ID ${categoryId} not found.`,
         );
       }
       expert.category = { id: categoryId } as Category;
     }
 
-    // ۳. استفاده از متد کمکی برای آپدیت هوشمند و جزئی لوکیشن 🚀
     expert.location =
       this.updateLocation(expert.location, latitude, longitude) ??
       expert.location;
 
-    // ۴. شروع تراکنش برای ذخیره تغییرات
     return await this.expertRepository.manager.transaction(async (manager) => {
-      // ۵. مدیریت آپلود عکس جدید
       if (imageIds && imageIds.length > 0) {
         const galleryImages = await this.galleryManager.attachGallery(
           imageIds,
@@ -207,7 +194,6 @@ export class ExpertsService {
         }
       }
 
-      // ۶. ذخیره و لاگ
       const updatedExpert = await manager.save(Expert, expert);
       this.logger.log(
         `Expert profile updated successfully for User ID: ${userId} - Expert ID: ${updatedExpert.id}`,
@@ -218,16 +204,14 @@ export class ExpertsService {
   }
 
   public async remove(userId: number): Promise<void> {
-    // ۱. بررسی وجود پروفایل بر اساس آیدی کاربر
     const expert = await this.expertRepository.findOne({
       where: { user: { id: userId } },
     });
 
     if (!expert) {
-      throw new NotFoundException('پروفایل متخصصی برای شما یافت نشد!');
+      throw new NotFoundException('Expert profile not found for this user!');
     }
 
-    // ۲. حذف در بستر تراکنش
     await this.expertRepository.manager.transaction(async (manager) => {
       await manager.remove(Expert, expert);
 
@@ -254,19 +238,16 @@ export class ExpertsService {
 
     if (finalLat == null || finalLng == null) {
       throw new BadRequestException(
-        'latitude و longitude باید هر دو معتبر باشند.',
+        'Both latitude and longitude must be valid.',
       );
     }
 
-    // محدوده عرض و طول جغرافیایی کره زمین
     if (finalLat < -90 || finalLat > 90) {
-      throw new BadRequestException('مقدار latitude باید بین -90 و 90 باشد.');
+      throw new BadRequestException('Latitude must be between -90 and 90.');
     }
 
     if (finalLng < -180 || finalLng > 180) {
-      throw new BadRequestException(
-        'مقدار longitude باید بین -180 و 180 باشد.',
-      );
+      throw new BadRequestException('Longitude must be between -180 and 180.');
     }
 
     return {
@@ -281,35 +262,30 @@ export class ExpertsService {
   ) {
     const { availabilityStatus } = updateExpertAvailabilityDto;
 
-    // ۱. فقط آیدی متخصص رو میگیریم که سبک باشه (برای رویداد نیاز داریم)
     const expert = await this.expertRepository.findOne({
       where: { user: { id: userId } },
-      select: ['id'], // فقط آیدی رو بیار، بقیه رو ول کن! 🪶
+      select: ['id'],
     });
 
     if (!expert) {
-      throw new NotFoundException('پروفایل متخصصی برای شما یافت نشد!');
+      throw new NotFoundException('Expert profile not found for this user!');
     }
 
-    // ۲. آپدیت مستقیم و نقطه‌ای در دیتابیس (بدون درگیری با بقیه فیلدها) ⚡
     await this.expertRepository.update(
       { id: expert.id },
       { availabilityStatus },
     );
 
-    // ۳. لاگ کردن
     this.logger.log(
-      `وضعیت متخصص ${expert.id} (User ID: ${userId}) با موفقیت به ${availabilityStatus} تغییر یافت.`,
+      `Status for expert ${expert.id} (User ID: ${userId}) was successfully updated to ${availabilityStatus}.`,
     );
 
-    // ۴. خبر کردن بقیه سیستم (نقشه، سوکت و...) 🚀
     this.eventEmitter.emit('expert.status.updated', {
       expertId: expert.id,
       userId: userId,
       status: availabilityStatus,
     });
 
-    // برگرداندن دیتای سبک به کلاینت
     return {
       id: expert.id,
       availabilityStatus,
@@ -318,9 +294,9 @@ export class ExpertsService {
   public async getCategories(): Promise<Category[]> {
     try {
       const categories = await this.categoryRepository.find({
-        select: ['id', 'name'], // We only need id and name for the frontend dropdown
+        select: ['id', 'name'],
         order: {
-          id: 'ASC', // Optional: order them predictably
+          id: 'ASC',
         },
       });
 
@@ -333,17 +309,17 @@ export class ExpertsService {
   public async getProfile(userId: number): Promise<Expert> {
     const expert = await this.expertRepository.findOne({
       where: { user: { id: userId } },
-      // اینجا ریلیشن‌ها رو میاریم که دیتای دسته‌بندی و عکس هم همراهش بیاد
+
       relations: ['category', 'avatar', 'user'],
     });
 
     if (!expert) {
       throw new NotFoundException(
-        'پروفایل متخصصی برای شما یافت نشد! اول باید پروفایلت رو بسازی. 🛠️',
+        'Expert profile not found! You need to create your profile first. 🛠️',
       );
     }
 
-    this.logger.log(`پروفایل متخصص برای کاربر ${userId} با موفقیت واکشی شد.`);
+    this.logger.log(`Expert profile for user ${userId} fetched successfully.`);
 
     return expert;
   }
@@ -354,10 +330,10 @@ export class ExpertsService {
     });
 
     if (!expert) {
-      throw new NotFoundException(`متخصصی با آیدی ${expertId} پیدا نشد! 🕵️‍♂️`);
+      throw new NotFoundException(`Expert with ID ${expertId} not found! 🕵️‍♂️`);
     }
 
-    this.logger.log(`پروفایل متخصص با آیدی ${expertId} با موفقیت واکشی شد.`);
+    this.logger.log(`Expert profile with ID ${expertId} fetched successfully.`);
 
     return expert;
   }

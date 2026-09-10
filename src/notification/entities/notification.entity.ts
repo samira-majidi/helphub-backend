@@ -22,23 +22,23 @@ export class Notification {
   @Column({ name: 'user_id' })
   userId: number;
 
-  // نوع نوتیفیکیشن برای اینکه فرانت‌اند بدونه چه آیکون یا لینکی نشون بده
+
   @Column({ type: 'enum', enum: NotificationType })
   type: NotificationType;
 
-  // عنوان نوتیفیکیشن
+
   @Column()
   title: string;
 
-  // متن اصلی یا دیتای اضافی (می‌تونه JSON باشه تا دیتای کاستوم بفرستی)
+
   @Column({ type: 'text' })
   message: string;
 
-  // دیتای جانبی (مثلاً آیدی چت یا لینک پروفایل)
+ 
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
-  // وضعیت خوانده شدن
+
   @Column({ default: false, name: 'is_read' })
   isRead: boolean;
 

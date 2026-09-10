@@ -14,7 +14,6 @@ import { User } from '#src/users/user.entity';
 import { Category } from './categories.entity';
 import { Upload } from '#src/common/upload/entity/upload.entity';
 import { ExpertAvailabilityStatus } from '../enum/expert-availability-status.enum';
-// مسیر رو چک کن
 
 @Entity('experts')
 export class Expert {
@@ -49,9 +48,8 @@ export class Expert {
   })
   availabilityStatus: ExpertAvailabilityStatus;
 
-  // ارتباط با جدول کاربران
   @OneToOne(() => User, (user) => user.expert, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' }) // این خط یه ستون userId تو جدول experts می‌سازه
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @ManyToOne(() => Category, (category) => category.experts)

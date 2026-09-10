@@ -139,7 +139,7 @@ export class ChatService {
     if (!member) {
       throw new ForbiddenException('You are not a member of this room.');
     }
-    await this.checkDailyMessageLimit(senderId); 
+    await this.checkDailyMessageLimit(senderId);
     const newMessage = this.messageRepository.create({
       room_id: roomId,
       sender_id: senderId,
@@ -189,7 +189,7 @@ export class ChatService {
           title: 'new message',
           message: content
             ? content.substring(0, 50)
-            : 'شما یک پیام جدید دارید',
+            : 'you have a new message',
           metadata: {
             roomId: roomId,
             messageId: savedMessage.id,
@@ -385,7 +385,6 @@ export class ChatService {
       {} as Record<string | number, Message>,
     );
 
-    // محاسبه هم‌زمان تعداد خوانده‌نشده‌ها برای هر اتاق
     const conversations = await Promise.all(
       rooms.map(async (room) => {
         const latestMsg = lastMessagesMap[room.id];

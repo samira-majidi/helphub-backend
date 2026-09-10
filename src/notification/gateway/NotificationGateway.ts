@@ -43,8 +43,6 @@ export class NotificationGateway
     console.log('🚀 NotificationGateway is initialized!');
   }
 
-  // دقت کن: afterInit حذف شد!
-
   handleConnection(client: AuthenticatedSocket) {
     super.handleConnection(client);
     const userId = client.user?.sub || client.data?.user?.sub;

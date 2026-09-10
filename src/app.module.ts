@@ -62,7 +62,7 @@ const ENV = process.env.NODE_ENV;
       },
     }),
     EventEmitterModule.forRoot({
-      global: true, // ← این مهمه!
+      global: true,
     }),
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync(jwtConfig.asProvider()),

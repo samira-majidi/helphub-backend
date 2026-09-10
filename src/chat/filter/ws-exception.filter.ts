@@ -10,17 +10,14 @@ export class WsCatchAllFilter extends BaseWsExceptionFilter {
   catch(exception: any, host: ArgumentsHost) {
     const client = host.switchToWs().getClient();
 
-    // چاپ دقیق و کامل خطا در ترمینال NestJS
-    this.logger.error(`🔥 خطای سوکت رخ داد!`);
+    this.logger.error(`🔥 socket erorr`);
     console.dir(exception, { depth: null, colors: true });
 
-    // استخراج پیام خطا برای ارسال درست به فرانت‌اند
     const errorDetails =
       exception instanceof Error ? exception.message : exception;
 
     const responseError = exception?.response || errorDetails;
 
-    // ارسال دستی و تمیز خطا به فرانت‌اند (تا دیگه {} نگیریم)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     client.emit('exception', {
       status: 'error',

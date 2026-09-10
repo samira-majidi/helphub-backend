@@ -18,7 +18,7 @@ import { UploadModule } from '#src/common/upload/upload.module';
     AuthModule,
     TypeOrmModule.forFeature([Room, RoomMember, Message]),
     OwnershipModule,
-    UploadModule, // 👈 اضافه کردن به آرایه imports
+    UploadModule,
   ],
   controllers: [ChatController],
   providers: [ChatGateway, ChatService, RedisService],

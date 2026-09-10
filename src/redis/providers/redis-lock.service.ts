@@ -76,9 +76,3 @@ export class RedisLockService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
-/*
-قفل در بلاک try گرفته می‌شه
-اگه هر خطایی رخ بده (اتاق پیدا نشد، اتاق available نیست، خطای دیتابیس، …)
-بلاک finally اجرا می‌شه و قفل release می‌شه
-
-*/

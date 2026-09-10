@@ -3,7 +3,7 @@ import { ExpertAvailabilityStatus } from '../enum/expert-availability-status.enu
 
 export class UpdateExpertAvailabilityDto {
   @IsEnum(ExpertAvailabilityStatus, {
-    message: 'وضعیت متخصص باید available، busy یا off_shift باشد.',
+    message: 'Expert status must be available, busy, or off_shift.',
   })
   availabilityStatus: ExpertAvailabilityStatus;
 }

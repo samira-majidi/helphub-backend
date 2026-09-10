@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { CreatUserDto } from '../dtos/creat-user.dto';
+import { CreatUserDto } from '../dtos/create-user.dto';
 import { User } from '../user.entity';
 import { UserRole } from '#src/common/enum/user-role.enum';
 import { Repository } from 'typeorm';

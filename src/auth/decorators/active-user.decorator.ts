@@ -4,14 +4,12 @@ import { Socket } from 'socket.io';
 import { ActiveUserData } from '../interfaces/active-user.interface';
 import { REQUEST_USER_KEY } from '../constants/auth-constant';
 
-// تعریف نوع Socket اختصاصی با فیلد دیتای تایپ‌شده
 export interface AuthenticatedSocket extends Socket {
   data: {
     user?: ActiveUserData;
   };
 }
 
-// تعریف نوع Request اختصاصی برای کانتکست HTTP
 export interface AuthenticatedRequest extends Request {
   [REQUEST_USER_KEY]?: ActiveUserData;
 }
@@ -23,13 +21,10 @@ export const ActiveUser = createParamDecorator(
   ): ActiveUserData | ActiveUserData[keyof ActiveUserData] | undefined => {
     let user: ActiveUserData | undefined;
 
-    // ۱. بررسی کانتکست وب‌سوکت
     if (ctx.getType() === 'ws') {
       const client = ctx.switchToWs().getClient<AuthenticatedSocket>();
       user = client.data?.user;
-    }
-    // ۲. بررسی کانتکست HTTP
-    else {
+    } else {
       const request = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
       user = request[REQUEST_USER_KEY];
     }

@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserProvider } from './create-user.provider';
-import { CreatUserDto } from '../dtos/creat-user.dto';
+import { CreatUserDto } from '../dtos/create-user.dto';
 import { UserRole } from '#src/common/enum/user-role.enum';
 
 @Injectable()
@@ -25,10 +25,8 @@ export class UserService {
 
   public async createUser(creatUserDto: CreatUserDto, role: UserRole) {
     try {
-      // استفاده از await برای شکار خطا در catch الزامی است
       return await this.createUserProvider.createUser(creatUserDto, role);
     } catch (error: unknown) {
-      // تعریف تایپ موقت برای خواندن پراپرتی code
       const err = error as { code?: string };
 
       if (err.code === '23505') {
@@ -66,21 +64,15 @@ export class UserService {
     }
   }
   public async getUserProfileById(userId: number) {
-    // گرفتن یوزر به همراه پروفایل متخصص و جدول آپلود (فقط برای متخصص)
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: [
-        'expert', // گرفتن اطلاعات پایه متخصص
-        'expert.avatar', // Join با جدول Upload برای گرفتن عکس متخصص
-        'expert.category', // Join با جدول دسته‌بندی
-      ],
+      relations: ['expert', 'expert.avatar', 'expert.category'],
     });
 
     if (!user) {
-      throw new NotFoundException('کاربر مورد نظر یافت نشد!');
+      throw new NotFoundException('user Not found');
     }
 
-    // تشخیص اینکه کاربر متخصص هست یا نه
     const isSpecialist = !!user.expert;
 
     return {
@@ -88,23 +80,17 @@ export class UserService {
       email: user.email,
       role: user.role,
 
-      // --- فیلدهای مشترک و پایه ---
-      // طبق انتیتی شما اسم این فیلد name هست نه firstName
       name: user.name,
       lastName: user.lastName,
 
-      // --- مدیریت هوشمند آواتار ---
-      // ⚠️ توجه: کلمه `path` در خط زیر رو با فیلد درست در Upload Entity خودت (مثل filename یا fileUrl) عوض کن
       avatarUrl:
-        isSpecialist && user.expert?.avatar ? user.expert.avatar.path : null, // چون کاربر عادی آواتار نداره، برای کاربران عادی null برمی‌گرده
+        isSpecialist && user.expert?.avatar ? user.expert.avatar.path : null,
 
-      // --- فیلدهای مخصوص متخصص (اگر کاربر عادی باشه همگی null میشن) ---
       bio: isSpecialist ? user.expert.bio : null,
       rating: isSpecialist ? Number(user.expert.rating) : null,
       availabilityStatus: isSpecialist ? user.expert.availabilityStatus : null,
       location: isSpecialist ? user.expert.location : null,
 
-      // فقط در صورتی که متخصص باشه و دسته‌بندی داشته باشه برمی‌گردونه
       category:
         isSpecialist && user.expert.category
           ? {
