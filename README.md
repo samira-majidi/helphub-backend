@@ -1089,7 +1089,25 @@ The Jest configuration uses `ts-jest` and a Node test environment.
 The supplied source snapshot confirms the existence of unit-test files and Jest configuration, but it does not include the full test implementations or a coverage report. Therefore, no coverage percentage is claimed here.
 
 ---
+## Performance Testing
 
+The specialist search endpoint was load-tested with **k6** using up to **300 virtual users**.
+
+Results:
+
+- **28,608 requests**
+- **135.85 requests/sec**
+- **0% request failures**
+- **p95 latency: 295.58 ms**
+- **100% successful checks**
+
+The configured thresholds were met:
+
+- p95 response time < 500 ms
+- HTTP failure rate < 1%
+
+> This benchmark represents the tested endpoint and load scenario, not the capacity of the entire application.
+---
 ## Deployment
 
 The provided backend includes Docker and Docker Compose configuration.
